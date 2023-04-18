@@ -13,8 +13,8 @@ Aggregated L0Learn using Summary Statistics
 - Reference: directory of LD reference data based on European samples from 1000 Genomes Project (Phase 3) and UK Biobank 
 
 ## Code
-L0LearnSum.cpp: main optimization function
+- L0LearnSum.cpp: main optimization function
 
-construct_blocks / block.sh: LD block computation
+- construct_blocks / block.sh: LD block computation
 
-ALL_Sum_pipeline.R: full analysis pipeline for ALL-sum
+- ALL_Sum_pipeline.R: full analysis pipeline for ALL-sum
