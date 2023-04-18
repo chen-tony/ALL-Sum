@@ -15,6 +15,6 @@ Aggregated L0Learn using Summary Statistics
 ## Code
 - L0LearnSum.cpp: main optimization function
 
-- construct_blocks / block.sh: LD block computation
+- construct_blocks.html / block.sh: LD block computation
 
 - ALL_Sum_pipeline.R: full analysis pipeline for ALL-sum
