@@ -21,22 +21,27 @@
 
 
 # Tutorial
-## Download repo
+## Download GitHub
 - 
 
 ## Load dependencies
-- Must have gcc and R
+- R libraries (must have gcc and R on system)
+
 ```
 Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet'))'
 ```
 
+- plink2: https://www.cog-genomics.org/plink/2.0/
+
 ## Run test
+- Change the `--plink2` argument to where it is installed 
+
 ```
 Rscript allsum.R \
 --out Test/test \
 --sumstat Test/sumstat.txt \
 --ref Test/ref \
---plink2 ~/software/plink2 \
+--plink2 ~/plink2 \
 --tun Test/tuning \
 --val Test/validation \
 --pheno Test/pheno.txt
