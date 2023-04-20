@@ -31,7 +31,7 @@ unzip Range.zip
 # Tutorial
 ## Download GitHub
 ```
-git something
+git clone https://github.com/chen-tony/ALL-sum.git
 ```
 
 ## Load dependencies
@@ -47,6 +47,10 @@ Download plink2: https://www.cog-genomics.org/plink/2.0/
 Change the `--plink2` argument to wherever it is installed 
 
 ```
+# download test data
+wget Test.zip
+unzip Test.zip
+
 # help
 Rscript allsum.R -h 
 
@@ -62,3 +66,26 @@ Rscript allsum.R \
 ```
 
 For full-genome analysis (~1.5 million SNPs), allow around 20GB of memory and 45 minutes of runtime. Note that analysis of binary traits will likely take a little longer than continuous traits. 
+```
+# download LD reference data
+wget Reference.zip
+unzip Reference.zip
+
+# run on real data (example syntax)
+Rscript allsum.R \
+--out HDL \
+--sumstat HDL.txt \
+--sumstat-name rsid,chr,pos,a0,a1,stat,n_eff \
+--ref Reference/UKB_EUR_hm3_mega \
+--plink2 ~/plink2 \
+--tun tuning_data \
+--val validation_data \
+--pheno phenotypes.pheno \
+--pheno-name FID,IID,HDL \
+--cov covariates.cov \
+--cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
+
+
+
+
+```
