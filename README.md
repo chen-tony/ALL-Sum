@@ -22,19 +22,21 @@
 
 # Tutorial
 ## Download GitHub
-- 
+```
+git something
+```
 
 ## Load dependencies
-- R libraries (must have gcc and R on system)
+Load the following R libraries (must have gcc and R on system).
 
 ```
 Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet'))'
 ```
 
-- plink2: https://www.cog-genomics.org/plink/2.0/
+Download plink2: https://www.cog-genomics.org/plink/2.0/
 
 ## Run ALL-Sum
-- Change the `--plink2` argument to where it is installed 
+Change the `--plink2` argument to wherever it is installed 
 
 ```
 # help
