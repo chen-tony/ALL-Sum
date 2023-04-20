@@ -65,7 +65,7 @@ Rscript allsum.R \
 --pheno Test/pheno.txt
 ```
 
-For full-genome analysis (~1.5 million SNPs), allow around 20GB of memory and 45 minutes of runtime. Note that analysis of binary traits will likely take a little longer than continuous traits. 
+Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
 ```
 # download LD reference data
 wget Reference.zip
