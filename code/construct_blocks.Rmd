@@ -1,0 +1,170 @@
+---
+title: "Construct LD Blocks from Reference Data"
+output: html_document
+date: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+
+```
+
+```{r packages}
+library(dplyr)
+library(data.table)
+
+options(scipen=10)
+
+```
+
+## Construct range files for plink
+
+```{r range}
+for (ancestry in c('EUR', 'AFR', 'ASN')) {
+  print(ancestry)
+  blocks = fread(paste0(ancestry, '_LDBlocks.txt')) %>%
+    mutate(chr = readr::parse_number(chr))
+  
+  none = which(blocks$start == 'None')
+  if (length(none) > 0) {
+    for (i in none) {
+      blocks$stop[i-1] = blocks$stop[i]
+    }
+    blocks = blocks[-none,]
+  }
+  
+  blocks$start = as.numeric(blocks$start)
+  blocks$stop = as.numeric(blocks$stop)
+  
+  block_out = NULL
+  
+  for (chrom in 1:22) {
+    block_chr = blocks %>% filter(chr == chrom)
+    
+    # expand first block
+    block_chr$start[1] = 1
+    
+    # add a block at the end
+    block_tail = data.frame(chr=chrom, 
+                            start=block_chr$stop[length(block_chr$stop)], 
+                            stop=1e9)
+    
+    block_chr = rbind(block_chr, block_tail)
+    block_chr$stop = block_chr$stop - 1
+    block_chr = block_chr %>% mutate(block = row_number())
+    
+    block_split = split(block_chr, by=c('chr', 'block'))
+
+    # save ranges
+    for (block in 1:length(block_split)) {
+      range = block_split[[paste0(chrom, '.', block)]]
+      write.table(range, paste0('Range/', ancestry, '/chr_', chrom,
+                                '_block_', block, '.range'),
+                  row.names=F, col.names=F, quote=F)
+    }
+    
+    block_out = rbind(block_out, block_chr)
+  }
+  
+  # rewrite block file
+  write.table(block_out, paste0(ancestry, '_LDBlocks.txt'),
+              row.names=F, col.names=T, quote=F)
+}
+
+```
+
+## Make .map file from .bim
+
+```{r map}
+blocks = fread(paste0(out, 'EUR_LDBlocks.txt'))
+
+bim = fread('Test/tuning_test.bim',
+            col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
+
+full_table = NULL
+for (chrom in 1:22) {
+  cat(chrom, '..')
+  # subset to chromosome
+  bim_chr = filter(bim, chr==chrom)
+  
+  block_chr = filter(blocks, chr == chrom)
+  
+  block_split = split(block_chr, by=c('chr', 'block'))
+  
+  # split by blocks
+  ix_list = lapply(block_split, FUN=function(X) {
+    with(bim_chr, which(pos >= X$start & 
+                      pos <= X$stop))
+  })
+  
+  ix_list = Filter(f=function(x) length(x) > 0, ix_list)
+  
+  # append to bim
+  ix_table = rbindlist(lapply(1:length(ix_list), FUN=function(i) 
+    data.frame(bim_chr[ix_list[[i]], ], block=i)))
+  
+  full_table = rbind(full_table, ix_table)
+}
+cat('\n')
+
+fwrite(full_table, 'Test/tuning_test.map')
+
+```
+
+## Construct LD blocks using plink
+
+```{r plink}
+# make file for LD blocks
+system('mkdir Test/LD')
+
+# compute LD in blocks
+system('sbatch block.sh Test/tuning_Test EUR Test/LD 21')
+
+```
+
+## Check alignment of SNPs
+
+```{r align}
+map = fread('tuning_test.map',
+            col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block'))
+
+map_blocks = map %>% 
+  group_by(chr, block) %>% 
+  summarize(n=n()) %>%
+  ungroup() %>%
+  mutate(name = paste0('Test/LD/chr_', chr, '_block_', block))
+
+blocks = fread('EUR_LDBlocks.txt')
+
+block_file = blocks %>%
+  group_by(chr) %>%
+  mutate(block = row_number()) %>%
+  ungroup() %>%
+  mutate(name = paste0('Test/LD/chr_', chr, '_block_', block)) %>%
+  filter(name %in% map_blocks$name) %>%
+  pull(name)
+
+snp_list = lapply(block_file, FUN=function(x)
+  fread(paste0(x, '.snplist'), header=F)$V1)
+
+all.equal(unlist(snp_list), map$chr)
+
+```
+
+## Compile LD blocks
+
+```{r compile}
+ld_list = lapply(block_file, FUN=function(x)
+  data.matrix(fread(paste0(x, '.ld'))))
+
+ld_list = Filter(f=function(x) length(x) > 0, ld_list)
+length(ld_list)
+summary(unlist(lapply(ld_list, nrow)))
+sum(unlist(lapply(ld_list, nrow)))
+
+saveRDS(ld_list, 'test_ld.RDS')
+
+```
+
+
+

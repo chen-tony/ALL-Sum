@@ -197,13 +197,14 @@ mat L0LearnSum_auto(mat & beta_out, const List & R_list, const vec & r_full,
       grid_ix++;
     }
   }
-  Rcout << "\n";
   
   // rescale beta
   if (scaling.size() == p) {
-    Rcout << "rescale \n";
+    Rcout << "rescaling";
     rescale(beta_out, scaling);
   }
+  
+  Rcout << "\n";
   
   return par;
 }
@@ -258,14 +259,15 @@ mat L0LearnSum_grid(mat & beta_out, const List & R_list, const vec & r_full,
     beta_out.col(par_ix) = beta_full;
   }
   
-  Rcout << "\n";
-  
-  
   // rescale beta
   if (scaling.size() == p) {
-    Rcout << "rescale \n";
+    Rcout << "rescaling";
     rescale(beta_out, scaling);
+  } else {
+    Rcout << "no rescaling";
   }
+  
+  Rcout << "\n";
   
   return par;
 }
