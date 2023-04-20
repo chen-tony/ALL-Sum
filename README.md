@@ -30,7 +30,7 @@ git something
 Load the following R libraries (must have gcc and R on system).
 
 ```
-Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet'))'
+Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet', 'RISCA'))'
 ```
 
 Download plink2: https://www.cog-genomics.org/plink/2.0/
