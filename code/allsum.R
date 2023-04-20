@@ -21,7 +21,7 @@ option_list = list(
               metavar='character'),
   make_option('--sumstat-col', type='character', 
               default=NULL,
-              help='comma-separated column numbers [example: id,chr,pos,ref,alt,stat,n]', 
+              help='comma-separated column numbers [example: 1,2,3,4,5,6,7]', 
               metavar='character'),
   
   make_option(c('-r', '--ref'), type='character', 
