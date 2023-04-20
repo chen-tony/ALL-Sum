@@ -18,7 +18,15 @@
 - 1000G_EUR_hm3_mega[.map/_ld.RDS]: based on 253 European samples in 1000 Genomes Project (Phase 3) 
 - UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
 
+## Test Data
+```
+unzip Test.zip
+```
 
+## Range files for LD block construction
+```
+unzip Range.zip
+```
 
 # Tutorial
 ## Download GitHub
