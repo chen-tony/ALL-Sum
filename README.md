@@ -3,30 +3,18 @@
 ## Data
 - [EUR/AFR/ASN]_LDBlocks.txt: LD block information based on Berisa and Pickrell (2016)
 
-- Range/[EUR/AFR/ASN]/: set-range formatted files for computing LD blocks in plink
+- Range/[EUR/AFR/ASN]/: directory of set-range formatted files for computing LD blocks in plink
 
-- Test/: example data on chromosome 21 for testing
+- Test/: directory of example data on chromosome 21
 
 ## Code
-- L0LearnSum.cpp: main optimization function
+- L0LearnSum.cpp: main optimization function for L0Learn on summary data
 
-- construct_blocks.html / block.sh: LD block computation
-
-- ALL_Sum_pipeline.R: full analysis pipeline for ALL-sum
+- ALL_Sum_pipeline.R: full analysis pipeline for ALL-Sum
 
 ## Reference Data with ~1.5 million SNPs from HapMap3 + MEGA chips (Dropbox links?)
 - 1000G_EUR_hm3_mega[.map/_ld.RDS]: based on 253 European samples in 1000 Genomes Project (Phase 3) 
 - UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
-
-## Test Data
-```
-unzip Test.zip
-```
-
-## Range files for LD block construction
-```
-unzip Range.zip
-```
 
 # Tutorial
 ## Download GitHub
@@ -105,6 +93,8 @@ fwrite(full_table, 'ref.map')
 
 Then, we can use plink to compute LD blocks based on the positions in the Range directory. It may be fastest to separate this by chromosome. 
 ```
+# download Ranges for block positions
+wget Range.zip
 
 mkdir LD
 
@@ -131,7 +121,6 @@ done
 echo 
 
 done
-
 ```
 
 Check that everything has been aligned properly
@@ -157,7 +146,6 @@ block_file = blocks %>%
 snp_list = lapply(block_file, FUN=function(x) fread(paste0(x, '.snplist'), header=F)$V1)
 
 all.equal(unlist(snp_list), map$chr)
-
 ```
 
 Finally, compile the blocks into an R list.
@@ -168,8 +156,7 @@ ld_list = Filter(f=function(x) length(x) > 0, ld_list) # remove any potentially 
 length(ld_list) # total number of blocks
 sum(unlist(lapply(ld_list, nrow))) # check total number of SNPs
 
-saveRDS(ld_list, 'ref_ld.RDS') # save
-
+saveRDS(ld_list, 'ref_ld.RDS') # save 
 ```
 
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
@@ -191,8 +178,4 @@ Rscript allsum.R \
 --pheno-name FID,IID,trait \
 --cov covariates.cov \
 --cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
-
-
-
-
 ```
