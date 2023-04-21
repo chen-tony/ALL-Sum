@@ -18,19 +18,19 @@
 - UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
 
 # Tutorial
-## Download GitHub and dependencies
-Download plink2 from https://www.cog-genomics.org/plink/2.0/
+## Download package
+Need R and gcc on system to run. Download plink2 from https://www.cog-genomics.org/plink/2.0/. 
 ```
 git clone https://github.com/chen-tony/ALL-sum.git
 
-# necessary R packages (also need gcc)
+# necessary R packages
 Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet', 'RISCA'))'
 
 # download Reference data
 wget Reference.zip
 ```
 
-## Run ALL-Sum
+## Run ALL-Sum on test data
 Change the `--plink2` argument to wherever it is installed 
 ```
 # download test data
@@ -51,10 +51,10 @@ Rscript allsum.R \
 --pheno Test/pheno.txt
 ```
 
-
-
-## Running ALL-Sum from scratch
-First, create a ".map" file - appending LD block information to the relevant ".bim" file. For this example, we will be constructing EUR-based LD using a plink file called "ref". (In R)
+## Run ALL-Sum from scratch
+<details>
+  <summary>Creating new reference data (Click to expand)</summary>
+First, create a ".map" file - appending LD block information to the relevant ".bim" file. For this example, we will be constructing EUR-based LD using a plink file called "ref". 
 
 ```{r}
 library(dplyr)
@@ -163,7 +163,9 @@ sum(unlist(lapply(ld_list, nrow))) # verify correct number of SNPs
 
 saveRDS(ld_list, 'ref_ld.RDS') 
 ```
+</details>
 
+### Full-genome analysis
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
 ```
 Rscript allsum.R \
