@@ -59,7 +59,7 @@ Rscript allsum.R \
 --out trait \
 --sumstat trait_gwas.txt \
 --sumstat-name id,chr,pos,ref,alt,stat,n \
---ref REF \
+--ref Reference/UKB_EUR_hm3_mega \
 --plink2 ~/plink2 \
 --tun tuning \
 --val validation \
@@ -71,13 +71,14 @@ Rscript allsum.R \
 
 ## Creating new reference data
 ### Create .map file
+New LD will be computed based on an existing plink file (example name here 'REFERENCE'). In ALL-Sum analysis, replace '--ref Reference/UKB_EUR_hm3_mega' with '--ref REFERENCE'. 
 ```{r}
 library(dplyr)
 library(data.table)
 
 blocks = fread(paste0(out, 'EUR_LDBlocks.txt'))
 
-bim = fread('REF.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
+bim = fread('REFERENCE.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
 
 full_table = NULL
 for (chrom in 1:22) {
@@ -103,7 +104,7 @@ for (chrom in 1:22) {
   full_table = rbind(full_table, ix_table)
 }
 
-fwrite(full_table, 'REF.map')
+fwrite(full_table, 'REFERENCE.map')
 ```
 
 ### Compute LD blocks using plink
@@ -124,7 +125,7 @@ for ((block=1; block<=$n_blocks; block++)); do
 echo -n $block ..
 
 # calculate LD for each block
-plink --silent --bfile REF \
+plink --silent --bfile REFERENCE \
 --extract range Range/EUR/chr_${chrom}_block_${block}.range \
 --r square \
 --allow-no-sex \
@@ -144,7 +145,7 @@ library(dplyr)
 library(data.table)
 
 # get number of blocks within map file
-map = fread('ref.map', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block'))
+map = fread('REFERENCE.map', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block'))
 
 map_blocks = map %>% 
   group_by(chr, block) %>% 
@@ -175,5 +176,5 @@ ld_list = Filter(f=function(x) length(x) > 0, ld_list) # remove any potentially 
 length(ld_list) # total number of blocks
 sum(unlist(lapply(ld_list, nrow))) # verify correct number of SNPs
 
-saveRDS(ld_list, 'ref_ld.RDS') 
+saveRDS(ld_list, 'REFERENCE_ld.RDS') 
 ```
