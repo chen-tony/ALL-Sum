@@ -20,7 +20,6 @@
 # Tutorial
 ## Download package
 Need R and gcc on system to run. Download plink2 from https://www.cog-genomics.org/plink/2.0/. 
-
 ```
 git clone https://github.com/chen-tony/ALL-sum.git
 
@@ -33,7 +32,6 @@ wget Reference.zip
 
 ## Run ALL-Sum on test data
 Change the `--plink2` argument to wherever it is installed 
-
 ```
 # download test data
 wget Test.zip
@@ -55,9 +53,6 @@ Rscript allsum.R \
 
 ## Run ALL-Sum from scratch
 ### Create new reference data
-
-<summary>Click to expand</summary>
-  
 ```{r}
 library(dplyr)
 library(data.table)
@@ -94,8 +89,6 @@ fwrite(full_table, 'REF.map')
 ```
 
 ### Compute LD blocks using plink
-
-<summary>Click to expand</summary>
   
 ```
 # download Ranges for block positions
@@ -129,8 +122,6 @@ done
 ```
                                 
 ### Check alignment of SNPs and compile LD blocks into list
-  
-<summary>Click to expand</summary>  
 ```{r}
 library(dplyr)
 library(data.table)
@@ -155,7 +146,7 @@ block_file = blocks %>%
   filter(name %in% map_blocks$name) %>%
   pull(name)
 
-# make sure SNPs line up
+# check SNP alignment
 snp_list = lapply(block_file, FUN=function(x) fread(paste0(x, '.snplist'), header=F)$V1)
 
 all.equal(unlist(snp_list), map$chr)
@@ -170,9 +161,7 @@ sum(unlist(lapply(ld_list, nrow))) # verify correct number of SNPs
 saveRDS(ld_list, 'ref_ld.RDS') 
 ```
 
-  
 ### Full-genome analysis
-<summary> Click to expand </summary>
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
 ```
 Rscript allsum.R \
