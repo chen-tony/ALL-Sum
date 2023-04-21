@@ -56,7 +56,6 @@ Rscript allsum.R \
 ## Run ALL-Sum from scratch
 ### Create new reference data
 
-<details>
 <summary>Click to expand</summary>
   
 ```{r}
@@ -93,12 +92,9 @@ for (chrom in 1:22) {
 
 fwrite(full_table, 'REF.map')
 ```
-  
-<details>
 
 ### Compute LD blocks using plink
-  
-<details>
+
 <summary>Click to expand</summary>
   
 ```
@@ -132,11 +128,8 @@ echo
 done
 ```
                                 
-<details>
-        
 ### Check alignment of SNPs and compile LD blocks into list
   
-<details>
 <summary>Click to expand</summary>  
 ```{r}
 library(dplyr)
@@ -176,11 +169,9 @@ sum(unlist(lapply(ld_list, nrow))) # verify correct number of SNPs
 
 saveRDS(ld_list, 'ref_ld.RDS') 
 ```
-</details>
 
   
 ### Full-genome analysis
-<details>
 <summary> Click to expand </summary>
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
 ```
@@ -197,4 +188,3 @@ Rscript allsum.R \
 --cov covariates.cov \
 --cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
 ```
-</details>
