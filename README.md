@@ -30,8 +30,9 @@ Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr
 wget Reference.zip
 ```
 
-## Run ALL-Sum on test data
-Change the `--plink2` argument to wherever it is installed 
+## Run ALL-Sum
+Change the `--plink2` argument to wherever it is installed.
+### Test data
 ```
 # download test data
 wget Test.zip
@@ -51,8 +52,25 @@ Rscript allsum.R \
 --pheno Test/pheno.txt
 ```
 
-## Run ALL-Sum from scratch
-### Create new reference data
+### Full-genome analysis
+Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
+```
+Rscript allsum.R \
+--out trait \
+--sumstat trait_gwas.txt \
+--sumstat-name id,chr,pos,ref,alt,stat,n \
+--ref REF \
+--plink2 ~/plink2 \
+--tun tuning \
+--val validation \
+--pheno phenotypes.pheno \
+--pheno-name FID,IID,trait \
+--cov covariates.cov \
+--cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
+```
+
+## Creating new reference data
+### Create .map file
 ```{r}
 library(dplyr)
 library(data.table)
@@ -89,7 +107,6 @@ fwrite(full_table, 'REF.map')
 ```
 
 ### Compute LD blocks using plink
-  
 ```
 # download Ranges for block positions
 wget Range.zip
@@ -159,21 +176,4 @@ length(ld_list) # total number of blocks
 sum(unlist(lapply(ld_list, nrow))) # verify correct number of SNPs
 
 saveRDS(ld_list, 'ref_ld.RDS') 
-```
-
-### Full-genome analysis
-Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
-```
-Rscript allsum.R \
---out trait \
---sumstat trait_gwas.txt \
---sumstat-name id,chr,pos,ref,alt,stat,n \
---ref ref \
---plink2 ~/plink2 \
---tun tuning \
---val validation \
---pheno phenotypes.pheno \
---pheno-name FID,IID,trait \
---cov covariates.cov \
---cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
 ```
