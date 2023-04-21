@@ -32,7 +32,6 @@ wget Reference.zip
 
 ## Run ALL-Sum
 Change the `--plink2` argument to wherever it is installed 
-
 ```
 # download test data
 wget Test.zip
@@ -55,9 +54,12 @@ Rscript allsum.R \
 
 
 ## Running ALL-Sum from scratch
-First, create a ".map" file - appending LD block information to the relevant ".bim" file. For this example, we will be constructing EUR-based LD using a plink file called "ref". 
+First, create a ".map" file - appending LD block information to the relevant ".bim" file. For this example, we will be constructing EUR-based LD using a plink file called "ref". (In R)
 
 ```{r}
+library(dplyr)
+library(data.table)
+
 blocks = fread(paste0(out, 'EUR_LDBlocks.txt'))
 
 bim = fread('ref.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
@@ -122,9 +124,13 @@ echo
 done
 ```
 
-Check that everything has been aligned properly
+Check that everything has been aligned properly and compile LD blocks into a list.
 ```{r}
-map = fread('ref.map', ol.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block'))
+library(dplyr)
+library(data.table)
+
+# get number of blocks within map file
+map = fread('ref.map', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block'))
 
 map_blocks = map %>% 
   group_by(chr, block) %>% 
@@ -132,6 +138,7 @@ map_blocks = map %>%
   ungroup() %>%
   mutate(name = paste0('LD/chr_', chr, '_block_', block))
 
+# match with reference block information
 blocks = fread('EUR_LDBlocks.txt')
 
 block_file = blocks %>%
@@ -142,20 +149,19 @@ block_file = blocks %>%
   filter(name %in% map_blocks$name) %>%
   pull(name)
 
+# make sure SNPs line up
 snp_list = lapply(block_file, FUN=function(x) fread(paste0(x, '.snplist'), header=F)$V1)
 
 all.equal(unlist(snp_list), map$chr)
-```
 
-Finally, compile the blocks into an R list.
-```{r}
+# compile LD blocks into list
 ld_list = lapply(block_file, FUN=function(x) data.matrix(fread(paste0(x, '.ld'))))
 
 ld_list = Filter(f=function(x) length(x) > 0, ld_list) # remove any potentially empty blocks
 length(ld_list) # total number of blocks
-sum(unlist(lapply(ld_list, nrow))) # check total number of SNPs
+sum(unlist(lapply(ld_list, nrow))) # verify correct number of SNPs
 
-saveRDS(ld_list, 'ref_ld.RDS') # save 
+saveRDS(ld_list, 'ref_ld.RDS') 
 ```
 
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
