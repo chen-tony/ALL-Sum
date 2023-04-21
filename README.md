@@ -52,8 +52,9 @@ Rscript allsum.R \
 ```
 
 ## Run ALL-Sum from scratch
+### Create new reference data
 <details>
-  <summary>Creating new reference data (Click to expand)</summary>
+<summary>Click to expand</summary>
 First, create a ".map" file - appending LD block information to the relevant ".bim" file. For this example, we will be constructing EUR-based LD using a plink file called "ref". 
 
 ```{r}
@@ -89,10 +90,12 @@ for (chrom in 1:22) {
 }
 
 fwrite(full_table, 'ref.map')
-
 ```
+<details>
 
-Then, we can use plink to compute LD blocks based on the positions in the Range directory. It may be fastest to separate this by chromosome. 
+### Compute LD blocks using plink
+<details>
+<summary>Click to expand</summary>
 ```
 # download Ranges for block positions
 wget Range.zip
@@ -123,8 +126,11 @@ echo
 
 done
 ```
-
-Check that everything has been aligned properly and compile LD blocks into a list.
+<details>
+        
+### Check alignment of SNPs and compile LD blocks into list
+<details>
+<summary>Click to expand</summary>  
 ```{r}
 library(dplyr)
 library(data.table)
@@ -169,8 +175,7 @@ saveRDS(ld_list, 'ref_ld.RDS')
 ### Full-genome analysis
   
 <details>
-<summary> Click to expand</summary>
-
+<summary> Click to expand </summary>
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
 ```
 Rscript allsum.R \
