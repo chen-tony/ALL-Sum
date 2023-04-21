@@ -14,22 +14,21 @@
 
 ## Reference Data with ~1.5 million SNPs from HapMap3 + MEGA chips (Dropbox links?)
 - 1000G_EUR_hm3_mega[.map/_ld.RDS]: based on 253 European samples in 1000 Genomes Project (Phase 3) 
+
 - UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
 
 # Tutorial
-## Download GitHub
+## Download GitHub and dependencies
+Download plink2 from https://www.cog-genomics.org/plink/2.0/
 ```
 git clone https://github.com/chen-tony/ALL-sum.git
-```
 
-## Load dependencies
-Load the following R libraries (must have gcc and R on system).
-
-```
+# necessary R packages (also need gcc)
 Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet', 'RISCA'))'
-```
 
-Download plink2: https://www.cog-genomics.org/plink/2.0/
+# download Reference data
+wget Reference.zip
+```
 
 ## Run ALL-Sum
 Change the `--plink2` argument to wherever it is installed 
@@ -161,15 +160,10 @@ saveRDS(ld_list, 'ref_ld.RDS') # save
 
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
 ```
-# download LD reference data
-wget Reference.zip
-unzip Reference.zip
-
-# run on real data (example syntax)
 Rscript allsum.R \
 --out trait \
 --sumstat trait_gwas.txt \
---sumstat-name rsid,chr,pos,a0,a1,stat,n_eff \
+--sumstat-name id,chr,pos,ref,alt,stat,n \
 --ref ref \
 --plink2 ~/plink2 \
 --tun tuning \
