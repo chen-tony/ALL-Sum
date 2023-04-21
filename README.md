@@ -20,6 +20,7 @@
 # Tutorial
 ## Download package
 Need R and gcc on system to run. Download plink2 from https://www.cog-genomics.org/plink/2.0/. 
+
 ```
 git clone https://github.com/chen-tony/ALL-sum.git
 
@@ -32,6 +33,7 @@ wget Reference.zip
 
 ## Run ALL-Sum on test data
 Change the `--plink2` argument to wherever it is installed 
+
 ```
 # download test data
 wget Test.zip
@@ -53,8 +55,10 @@ Rscript allsum.R \
 
 ## Run ALL-Sum from scratch
 ### Create new reference data
+
 <details>
 <summary>Click to expand</summary>
+  
 ```{r}
 library(dplyr)
 library(data.table)
@@ -89,11 +93,14 @@ for (chrom in 1:22) {
 
 fwrite(full_table, 'REF.map')
 ```
+  
 <details>
 
 ### Compute LD blocks using plink
+  
 <details>
 <summary>Click to expand</summary>
+  
 ```
 # download Ranges for block positions
 wget Range.zip
@@ -124,9 +131,11 @@ echo
 
 done
 ```
+                                
 <details>
         
 ### Check alignment of SNPs and compile LD blocks into list
+  
 <details>
 <summary>Click to expand</summary>  
 ```{r}
