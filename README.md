@@ -55,15 +55,13 @@ Rscript allsum.R \
 ### Create new reference data
 <details>
 <summary>Click to expand</summary>
-First, create a ".map" file - appending LD block information to the relevant ".bim" file. For this example, we will be constructing EUR-based LD using a plink file called "ref". 
-
 ```{r}
 library(dplyr)
 library(data.table)
 
 blocks = fread(paste0(out, 'EUR_LDBlocks.txt'))
 
-bim = fread('ref.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
+bim = fread('REF.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
 
 full_table = NULL
 for (chrom in 1:22) {
@@ -89,7 +87,7 @@ for (chrom in 1:22) {
   full_table = rbind(full_table, ix_table)
 }
 
-fwrite(full_table, 'ref.map')
+fwrite(full_table, 'REF.map')
 ```
 <details>
 
@@ -113,8 +111,8 @@ for ((block=1; block<=$n_blocks; block++)); do
 echo -n $block ..
 
 # calculate LD for each block
-plink --silent --bfile ref \
---extract range ${block_dir}/Range/chr_${chrom}_block_${block}.range \
+plink --silent --bfile REF \
+--extract range Range/EUR/chr_${chrom}_block_${block}.range \
 --r square \
 --allow-no-sex \
 --silent \
@@ -173,7 +171,6 @@ saveRDS(ld_list, 'ref_ld.RDS')
 
   
 ### Full-genome analysis
-  
 <details>
 <summary> Click to expand </summary>
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
