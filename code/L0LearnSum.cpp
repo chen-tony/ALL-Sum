@@ -136,7 +136,6 @@ double L0LearnSum_block(vec & beta_vec, const List & R_list, const vec & r_full,
   return conv_full / n_blocks;
 }
 
-
 /////////////////////
 /// Adaptive Grid ///
 /////////////////////
@@ -263,9 +262,7 @@ mat L0LearnSum_grid(mat & beta_out, const List & R_list, const vec & r_full,
   if (scaling.size() == p) {
     Rcout << "rescaling";
     rescale(beta_out, scaling);
-  } else {
-    Rcout << "no rescaling";
-  }
+  } 
   
   Rcout << "\n";
   

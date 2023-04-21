@@ -260,8 +260,13 @@ if (!is.null(opt$tun) & file.exists(paste0(opt$tun, '.frq'))) {
   freqs = fread(paste0(opt$tun, '.frq'), 
                 col.names=c('chr', 'id', 'alt', 'ref', 'maf', 'n'),
                 showProgress=F)
-  rescales = with(freqs, 1 / sqrt(2*maf*(1-maf)))
-  rm(freqs); invisible(gc())
+  
+  maf = map0 %>% 
+    left_join(freqs, by='id') %>% 
+    pull(maf)
+  
+  rescales = 1 / sqrt(2*maf*(1-maf))
+  rm(freqs, maf); invisible(gc())
 } else {
   rescales = 1
 }
@@ -272,6 +277,8 @@ par_out = L0LearnSum_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
                           grid, n_lambda0, scaling=rescales)
 colnames(par_out) = c('lambda0', 'lambda1', 'lambda2', 'M', 'L0', 'L1', 'L2', 'conv', 'totit')
 par_out = data.frame(par_out)
+
+fwrite(par_out, paste0(opt$out, '_pars.txt'), sep='\t')
 
 # remove SNPs that are zero for all parameters
 nonzero = which(rowSums(beta^2) > 0)
@@ -303,6 +310,7 @@ if (!is.null(opt$tun)) {
   
   # only look at results that converged and are nonzero
   par_out$pred_tun = NA
+  par_out$rev_beta = NA
   ix_conv = which(par_out$conv == 1 & par_out$L0 > 0)
   
   # read in phenotype / covariate data
@@ -387,6 +395,7 @@ if (!is.null(opt$tun)) {
                  data=tun_data)$auc)
     
     # need to flip beta if AUC < 0.5
+    par_out$rev_beta = NA
     par_out$rev_beta = (par_out$pred_tun < 0.5)
     
     # final AUC
