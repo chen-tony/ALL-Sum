@@ -53,18 +53,18 @@ Rscript allsum.R \
 ```
 
 ### Full-genome analysis
-Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. 
+Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. Below is an example script 
 ```
 Rscript allsum.R \
---out trait \
---sumstat trait_gwas.txt \
+--out Trait \
+--sumstat Trait_gwas.txt \
 --sumstat-name id,chr,pos,ref,alt,stat,n \
 --ref Reference/UKB_EUR_hm3_mega \
 --plink2 ~/plink2 \
 --tun tuning \
 --val validation \
 --pheno phenotypes.pheno \
---pheno-name FID,IID,trait \
+--pheno-name FID,IID,Trait \
 --cov covariates.cov \
 --cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
 ```
