@@ -72,6 +72,7 @@ Rscript allsum.R \
 ## Creating new reference data
 ### Create .map file
 New LD will be computed based on an existing plink file (example name here 'REFERENCE'). In ALL-Sum analysis, replace '--ref Reference/UKB_EUR_hm3_mega' with '--ref REFERENCE'. 
+
 ```{r}
 library(dplyr)
 library(data.table)
@@ -113,7 +114,8 @@ fwrite(full_table, 'REFERENCE.map', sep='\t')
 ```
 
 ### Compute LD blocks using plink
-For 1000 Genomes EUR (~500 samples, 1.5 SNPs), this took about 10 minutes and 100 MB. For larger data such as UKB EUR (~300k samples, 1.5 SNPs), this can take. Sample size does not need to be very large for reasonable LD. 
+For 1000 Genomes EUR (~500 samples, 1.5 SNPs), this took about 10 minutes and 100 MB. For larger data such as UKB EUR (~300k samples, 1.5 SNPs), this can take. In practice, a small subset with a few thousand samples should be enough.
+
 ```
 # download Ranges for block positions
 wget Range.zip
@@ -146,6 +148,7 @@ done
 ```
                                 
 ### Check alignment of SNPs and compile LD blocks into list
+
 ```{r}
 library(dplyr)
 library(data.table)
