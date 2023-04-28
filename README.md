@@ -104,10 +104,16 @@ for (chrom in 1:22) {
   full_table = rbind(full_table, ix_table)
 }
 
+full_table = full_table %>%
+  group_by(chr, block) %>%
+  mutate(ix=row_number()) %>% 
+  ungroup()
+
 fwrite(full_table, 'REFERENCE.map')
 ```
 
 ### Compute LD blocks using plink
+For 1000 Genomes EUR (~500 samples, 1.5 SNPs), this took about 10 minutes and 100 MB. For larger data such as UKB EUR (~300k samples, 1.5 SNPs), this can take. Sample size does not need to be very large for reasonable LD. 
 ```
 # download Ranges for block positions
 wget Range.zip
