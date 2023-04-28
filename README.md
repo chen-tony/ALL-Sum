@@ -109,7 +109,7 @@ full_table = full_table %>%
   mutate(ix=row_number()) %>% 
   ungroup()
 
-fwrite(full_table, 'REFERENCE.map')
+fwrite(full_table, 'REFERENCE.map', sep='\t')
 ```
 
 ### Compute LD blocks using plink
