@@ -155,7 +155,7 @@ library(dplyr)
 library(data.table)
 
 # get number of blocks within map file
-map = fread('REFERENCE.map', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block'))
+map = fread('REFERENCE.map', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref', 'block', 'ix'))
 
 map_blocks = map %>% 
   group_by(chr, block) %>% 
