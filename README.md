@@ -114,7 +114,7 @@ fwrite(full_table, 'REFERENCE.map', sep='\t')
 ```
 
 ### Compute LD blocks using plink
-For 1000 Genomes EUR (~500 samples, 1.5 SNPs), this took about 10 minutes and 100 MB. For larger data such as UKB EUR (~300k samples, 1.5 SNPs), this can take. In practice, a small subset with a few thousand samples should be enough.
+For 1000 Genomes EUR (~500 samples, 1.5 SNPs), this should take about 10 minutes and 100 MB. For larger data such as UKB EUR (~300k samples, 1.5 SNPs), this can take up to 10 hours and 750 MB. This procedure can also be done in parallel by running for separate chromosomes. In practice, a small subset with a few thousand samples should be enough. 
 
 ```
 # download Ranges for block positions
@@ -148,6 +148,7 @@ done
 ```
                                 
 ### Check alignment of SNPs and compile LD blocks into list
+Saving LD for 1.5 million SNPs should take about 10 GB of memory. 
 
 ```{r}
 library(dplyr)
