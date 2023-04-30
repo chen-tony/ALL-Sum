@@ -70,6 +70,8 @@ Rscript allsum.R \
 ```
 
 ## Creating new reference data
+While UKB or 1000 Genomes reference data may work well, it may be preferable to use available tuning (or other reference) data to compute LD. Below are steps to compute new LD blocks to feed into the ALL-Sum pipeline. 
+
 ### Create .map file
 New LD will be computed based on an existing plink file (example name here 'REFERENCE'). In ALL-Sum analysis, replace '--ref Reference/UKB_EUR_hm3_mega' with '--ref REFERENCE'. 
 
@@ -83,6 +85,7 @@ bim = fread('REFERENCE.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'r
 
 full_table = NULL
 for (chrom in 1:22) {
+  cat(chrom, '..')
   # subset to chromosome
   bim_chr = filter(bim, chr==chrom)
   
@@ -96,14 +99,13 @@ for (chrom in 1:22) {
                       pos <= X$stop))
   })
   
-  ix_list = Filter(f=function(x) length(x) > 0, ix_list)
-  
   # append to bim
   ix_table = rbindlist(lapply(1:length(ix_list), FUN=function(i) 
-    data.frame(bim_chr[ix_list[[i]], ], block=i)))
+    if (length(ix_list[[i]] > 0)) data.frame(bim_chr[ix_list[[i]], ], block=i)))
   
   full_table = rbind(full_table, ix_table)
 }
+cat('\n')
 
 full_table = full_table %>%
   group_by(chr, block) %>%
