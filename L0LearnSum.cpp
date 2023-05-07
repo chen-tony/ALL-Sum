@@ -32,7 +32,7 @@ void rescale(mat & beta_out, vec & scaling) {
 // [[Rcpp::export]]
 double L0LearnSum(vec & beta0, const mat & R, const vec & r, const vec & ix,
                   double lambda0, double lambda1, double lambda2, 
-                  const bool adap=true, int maxit=1e3, double btol=1e-4) {
+                  const bool adap=true, int maxit=1e2, double btol=1e-4) {
   int p = beta0.size(); 
   int j = 0;
   
@@ -59,6 +59,9 @@ double L0LearnSum(vec & beta0, const mat & R, const vec & r, const vec & ix,
       beta_tilde = r(j) - (R_beta(j) - beta_j); // R=X'X, r=X'Y
       z = (std::abs(beta_tilde) - lambda1) / (1+2*lambda2);
       if (z > threshold) beta0(j) = std::copysign(z, beta_tilde);
+      
+      // hard-code fix for exploding beta
+      if (std::abs(beta0(j)) > 10.0) beta0(j) = r(j);
 
       dbeta = beta0(j) - beta_j;
       
@@ -68,7 +71,7 @@ double L0LearnSum(vec & beta0, const mat & R, const vec & r, const vec & ix,
         max_dbeta = std::max(max_dbeta, std::abs(dbeta));
         
         // products with beta
-        R_beta += R.col(j) * dbeta; // make this not O(p)
+        R_beta += R.col(j) * dbeta; 
       }
       
       // norms
@@ -112,7 +115,7 @@ double L0LearnSum(vec & beta0, const mat & R, const vec & r, const vec & ix,
 double L0LearnSum_block(vec & beta_vec, const List & R_list, const vec & r_full, 
                         const List & ix_list, const vec & start, const vec & stop,
                         double lambda0, double lambda1, double lambda2, 
-                        const bool adap=true, int maxit=1e3, double btol=1e-4) {
+                        const bool adap=true, int maxit=1e2, double btol=1e-4) {
   int n_blocks = R_list.size();
   int p = beta_vec.size();
   double conv_full = 0.0, conv0 = 0.0;
@@ -144,7 +147,7 @@ double L0LearnSum_block(vec & beta_vec, const List & R_list, const vec & r_full,
 mat L0LearnSum_auto(mat & beta_out, const List & R_list, const vec & r_full, 
                     const List & ix_list, vec & start, vec & stop,
                     mat par_grid, int n_lambda0, vec scaling=0,
-                    int maxit=1e3, double btol=1e-4) {
+                    int maxit=1e2, double btol=1e-4) {
   int p = r_full.size();
   int n_par = par_grid.n_rows * n_lambda0;
   
@@ -217,7 +220,7 @@ mat L0LearnSum_auto(mat & beta_out, const List & R_list, const vec & r_full,
 mat L0LearnSum_grid(mat & beta_out, const List & R_list, const vec & r_full, 
                     const List & ix_list, vec & start, vec & stop,
                     mat par_grid, vec scaling=0,
-                    int maxit=1e3, double btol=1e-4) {
+                    int maxit=1e2, double btol=1e-4) {
   int p = r_full.size();
   int n_par = par_grid.n_rows;
   

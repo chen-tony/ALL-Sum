@@ -56,17 +56,31 @@ option_list = list(
   
   make_option(c('-c', '--cov'), type='character', 
               default=NULL, 
-              help='covariate data [assumed header: FID IID X]', 
+              help='covariate data [assumed header: FID IID X1 -- Xd]', 
               metavar='character'),
   make_option('--cov-name', type='character', 
               default=NULL, 
-              help='comma-separated column names [example: FID,IID,X]', 
+              help='comma-separated column names [example: FID,IID,X1,...,Xd]', 
               metavar='character'),
   make_option('--cov-col', type='character', 
               default=NULL, 
-              help='comma-separated column numbers [example: 1,2,3]', 
+              help='comma-separated column numbers [example: 1,2,3,...,d+2]', 
               metavar='character'),
   
+  make_option('--match-by-pos', type='character', 
+              default=NULL, 
+              action='store_true',
+              help='match by chr/pos instead of RSID + use RSID from map or sum', 
+              metavar=NULL),
+  
+  make_option(c('-g', '--grid'), type='character', 
+              default=NULL, 
+              help='file for parameter grid [header: lambda0_start lambda1 lambda2 alpha]', 
+              metavar='character'),
+  make_option('--nlambda0', type='integer',
+              default=50,
+              help='number of lambda0 values',
+              metavar='integer'),
   make_option('--seed', type='integer', 
               default=123, 
               help='random seed', 
@@ -75,6 +89,8 @@ option_list = list(
 
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser, convert_hyphens_to_underscores = T)
+
+if (is.null(opt$match_by_pos)) opt$match_by_pos = 'map'
 
 ## To implement later ##
 # --par: parameter grid file
@@ -160,46 +176,63 @@ cat('\n')
 
 # read in summary statistics
 cat('GWAS: ')
-sumstat = data.frame(fread(opt$sumstat), showProgress=F)
+sumstat = fread(opt$sumstat, showProgress=F)
 
 if (!is.null(opt$sumstat_name)) {
   opt$sumstat_name = strsplit(opt$sumstat_name, ',')[[1]]
   
-  sumstat = sumstat[,opt$sumstat_name]
+  sumstat = sumstat %>%
+    select(any_of(opt$sumstat_name)) %>%
+    data.frame()
+  
 } else if (!is.null(opt$sumstat_col)) {
   opt$sumstat_col = as.numeric(strsplit(opt$sumstat_col, ',')[[1]])
   
-  sumstat = sumstat[,opt$sumstat_col]
+  sumstat = data.frame(sumstat)[,opt$sumstat_col]
 }
 names(sumstat) = c('id', 'chr', 'pos', 'ref', 'alt', 'stat', 'n')
 
 # match SNPs between sumstats and LD reference
 map = fread(paste0(opt$ref, '.map'),
-            col.names=c('chr', 'id', 'posg', 'pos', 'alt', 'ref', 'block'), 
+            col.names=c('chr', 'id', 'posg', 'pos', 'alt', 'ref', 'block', 'ix'), 
             showProgress=F) %>%
   group_by(chr, block) %>%
   mutate(ix = row_number()) %>%
   ungroup()
 
-combined = map %>% 
-  left_join(sumstat, by=c('id'), suffix=c('.ld', '.sum')) %>%
+if (is.null(opt$match_by_pos)) {
+  # using RSID
+  combined = map %>% 
+    left_join(sumstat, by=c('id'), suffix=c('.map', '.sum')) %>%
+    rename(chr=chr.map) %>%
+    
+    # remove incorrectly specified SNPs
+    filter((ref.map == ref.sum) & (alt.map == alt.sum) | 
+             (ref.map == alt.sum) & (alt.map == ref.sum)) 
   
-  # remove incorrectly specified SNPs
-  filter((ref.ld == ref.sum) & (alt.ld == alt.sum) | (ref.ld == alt.sum) & (alt.ld == ref.sum)) 
+  map0 = combined %>% select(id, alt=alt.map)
+} else {
+  # using chr/pos
+  combined = map %>% 
+    left_join(sumstat, by=c('chr', 'pos'), suffix=c('.map', '.sum')) %>%
+    
+    # remove incorrectly specified SNPs
+    filter((ref.map == ref.sum) & (alt.map == alt.sum) | 
+             (ref.map == alt.sum) & (alt.map == ref.sum))
+  
+  map0 = combined %>% select(id=paste0('id.', opt$match_by_pos), alt=alt.map)
+}
   
 # flip sumstat effects as necessary (line up with LD reference)
-flipped = with(combined, ref.ld != ref.sum)
+flipped = with(combined, ref.map != ref.sum)
 combined$stat[flipped] = -combined$stat[flipped]
 
 cat(nrow(sumstat), 'variants,', 
-    nrow(combined), 'matched,', 
+    nrow(combined), 'matched,',
     sum(flipped), 'effects flipped \n')
 
 # convert summary statistics
 r = with(combined, stat / sqrt(n - 2 + stat^2))
-
-# hold onto map for plink2 scoring
-map0 = combined %>% select(id, alt=alt.ld)
 
 rm(sumstat); invisible(gc())
 
@@ -214,7 +247,7 @@ map_match = map %>%
   select(chr, block)
 
 ix_match_list = lapply(1:nrow(map_match), FUN=function(i) {
-  combined %>% filter(chr.ld==map_match$chr[i], 
+  combined %>% filter(chr==map_match$chr[i], 
                       block==map_match$block[i]) %>% pull(ix)
 })
 
@@ -246,11 +279,15 @@ rm(block_sizes, r_list, combined, map,
 #####################
 
 # parameter grid
-grid = cbind(lambda0_start = exp(seq(log(1e-5), log(1e-3), length.out=5)),
-             lambda1 = rep(0, 5),
-             lambda2 = exp(seq(log(1e2), log(1e-1), length.out=5)),
-             alpha = seq(0.85, 0.92, length.out=5))
-n_lambda0 = 50
+if (!is.null(opt$grid)) {
+  grid = data.frame(fread(opt$grid))
+} else {
+  grid = cbind(lambda0_start = exp(seq(log(1e-5), log(1e-3), length.out=5)),
+               lambda1 = rep(0, 5),
+               lambda2 = exp(seq(log(1e2), log(1e-1), length.out=5)),
+               alpha = seq(0.85, 0.92, length.out=5))
+}
+n_lambda0 = opt$nlambda0
 
 n_par = n_lambda0 * nrow(grid)
 cat(paste0('L0Learn-Sum (', n_par, ' parameters): '))
@@ -265,7 +302,14 @@ if (!is.null(opt$tun) & file.exists(paste0(opt$tun, '.frq'))) {
     left_join(freqs, by='id') %>% 
     pull(maf)
   
+  # convert MAF to rescaling factor
   rescales = 1 / sqrt(2*maf*(1-maf))
+  
+  # set any bad rescaling factors to 0
+  rescales[is.na(rescales)] = 0
+  rescales[is.infinite(rescales)] = 0
+  rescales[is.nan(rescales)] = 0
+  
   rm(freqs, maf); invisible(gc())
 } else {
   rescales = 1
@@ -277,6 +321,9 @@ par_out = L0LearnSum_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
                           grid, n_lambda0, scaling=rescales)
 colnames(par_out) = c('lambda0', 'lambda1', 'lambda2', 'M', 'L0', 'L1', 'L2', 'conv', 'totit')
 par_out = data.frame(par_out)
+beta[is.na(beta)] = 0
+beta[is.nan(beta)] = 0
+beta[is.infinite(beta)] = 0
 
 fwrite(par_out, paste0(opt$out, '_pars.txt'), sep='\t')
 
@@ -285,6 +332,8 @@ nonzero = which(rowSums(beta^2) > 0)
 beta = data.table(map0[nonzero,], beta[nonzero,])
 
 fwrite(beta, paste0(opt$out, '_beta.txt'), sep=' ')
+cat(paste0('   Effect estimates (', length(nonzero), 'x', n_par, ') written to ', opt$out, '_beta.txt \n'))
+
 rm(r, ld_list, ix_sort, i,
    grid, n_lambda0, 
    beta, rescales, starts, stops, nonzero); invisible(gc())
@@ -311,15 +360,17 @@ if (!is.null(opt$tun)) {
   # only look at results that converged and are nonzero
   par_out$pred_tun = NA
   par_out$rev_beta = NA
+  
   ix_conv = which(par_out$conv == 1 & par_out$L0 > 0)
   
   # read in phenotype / covariate data
+  cat('reading data, ')
   fam = fread(paste0(opt$tun, '.fam'),
               col.names=c('FID', 'IID', 'pat', 'mat', 'sex', 'pheno'),
               showProgress=F) %>%
     data.frame()
   
-  pheno = data.frame(fread(opt$pheno), showProgress=F)
+  pheno = data.frame(fread(opt$pheno, showProgress=F))
   if (!is.null(opt$pheno_name)) {
     opt$pheno_name = strsplit(opt$pheno_name, ',')[[1]]
     
@@ -329,7 +380,7 @@ if (!is.null(opt$tun)) {
     
     pheno = pheno[,opt$pheno_col]
   }
-  names(pheno)[3] = 'pheno'
+  names(pheno) = c('FID', 'IID', 'pheno')
   
   # check for binary outcome
   binary_outcome = (length(table(pheno$pheno)) == 2) 
@@ -344,23 +395,23 @@ if (!is.null(opt$tun)) {
   # join PRS, phenotype, covariate
   if (!is.null(opt$cov)) {
     
-    cov = data.frame(fread(opt$cov), showProgress=F)
+    cov = data.frame(fread(opt$cov, showProgress=F))
     if (!is.null(opt$cov_name)) {
       opt$cov_name = strsplit(opt$cov_name, split=',')[[1]]
       
       cov = cov[,opt$cov_name]
       names(cov)[1:2] = c('FID', 'IID')
-      cov_formula = paste(names(cov[-c(1:2)]), collapse='+')
+      cov_formula = paste(names(cov)[-c(1:2)], collapse='+')
       
     } else if (!is.null(opt$cov_col)) {
       opt$cov_col = as.numeric(strsplit(opt$cov_col, split=',')[[1]])
       
       cov = cov[,opt$cov_col]
       names(cov)[1:2] = c('FID', 'IID')
-      cov_formula = paste(names(cov[-c(1:2)]), collapse='+')
+      cov_formula = paste(names(cov)[-c(1:2)], collapse='+')
     } else {
-      names(cov) = c('FID', 'IID', 'X')
-      cov_formula = 'X'
+      names(cov)[1:2] = c('FID', 'IID')
+      cov_formula = paste(names(cov)[-c(1:2)], collapse='+')
     }
     
     tun_data = fam %>%
@@ -414,7 +465,6 @@ if (!is.null(opt$tun)) {
     
     # final R2 = correlation^2
     par_out$pred_tun[ix_conv] = temp_cor^2
-    
   }
   
   # choose best beta
@@ -434,7 +484,7 @@ if (!is.null(opt$tun)) {
   cat('saving results \n')
   fwrite(par_out, paste0(opt$out, '_pars.txt'), sep='\t')
   
-  cat(paste0('   Tuning summary written to ', opt$out, '_tuning.txt \n'))
+  cat(paste0('   Tuning summary written to ', opt$out, '_pars.txt \n'))
   
   rm(beta, best_beta, beta_col); invisible(gc())
   
@@ -449,7 +499,7 @@ if (!is.null(opt$tun)) {
     
   } else {
     fit_glmnet = cv.glmnet(data.matrix(tun_data[,paste0('SCORE', ix_conv, '_SUM')]), 
-                           tun_data$pheno, nfolds=3, family='gaussian')
+                           res_tun, nfolds=3, family='gaussian')
     
   }
   
@@ -582,8 +632,8 @@ if (!is.null(opt$val)) {
   )
   
   cat('saving results \n')
-  write.table(results, paste0(opt$out, '_results.txt'),
-              row.names=F, col.names=T, quote=F)
+  write.table(results, paste0(opt$out, '_results.txt'), 
+              sep = '\t', row.names=F, col.names=T, quote=F)
   
   cat(paste0('   Prediction results written to ', opt$out, '_results.txt \n'))
 }
