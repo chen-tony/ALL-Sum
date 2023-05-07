@@ -195,10 +195,7 @@ names(sumstat) = c('id', 'chr', 'pos', 'ref', 'alt', 'stat', 'n')
 # match SNPs between sumstats and LD reference
 map = fread(paste0(opt$ref, '.map'),
             col.names=c('chr', 'id', 'posg', 'pos', 'alt', 'ref', 'block', 'ix'), 
-            showProgress=F) %>%
-  group_by(chr, block) %>%
-  mutate(ix = row_number()) %>%
-  ungroup()
+            showProgress=F)
 
 if (is.null(opt$match_by_pos)) {
   # using RSID
