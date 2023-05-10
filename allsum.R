@@ -67,6 +67,11 @@ option_list = list(
               help='comma-separated column numbers [example: 1,2,3,...,d+2]', 
               metavar='character'),
   
+  make_option('--active', type='integer', 
+              default=0, 
+              help='use active set for optimization [include number of repeated active sets]', 
+              metavar='integer'),
+  
   make_option('--match-by-pos', type='character', 
               default=NULL, 
               action='store_true',
@@ -93,10 +98,7 @@ opt = parse_args(opt_parser, convert_hyphens_to_underscores = T)
 if (is.null(opt$match_by_pos)) opt$match_by_pos = 'map'
 
 ## To implement later ##
-# --par: parameter grid file
-# --sort: whether or not to use partial sorting
-# --ens: other ensembling options
-# --opt: other optimization options
+# --ens: other ensembling options (glmnet weighting)
 # --boot: bootstrap confidence interval to prediction
 
 ##########################
@@ -147,7 +149,7 @@ if (!is.null(opt$cov_name) & !is.null(opt$cov_col)) {
     cat(paste0('  --', i), arg[[i]], '\n')
   }
   
-  rm(arg); invisible(gc())
+  invisible(rm(arg)); invisible(gc())
 }
 
 ################
@@ -162,6 +164,8 @@ suppressPackageStartupMessages({
   library(glmnet)
 })
 
+invisible(sourceCpp('L0LearnSum.cpp'))
+
 set.seed(opt$seed)
 
 cat('\n')
@@ -169,11 +173,6 @@ cat('\n')
 #####################
 ## Data Processing ##
 #####################
-# load Rcpp
-cat('loading Rcpp...')
-invisible(sourceCpp('L0LearnSum.cpp'))
-cat('\n')
-
 # read in summary statistics
 cat('GWAS: ')
 sumstat = fread(opt$sumstat, showProgress=F)
@@ -231,7 +230,7 @@ cat(nrow(sumstat), 'variants,',
 # convert summary statistics
 r = with(combined, stat / sqrt(n - 2 + stat^2))
 
-rm(sumstat); invisible(gc())
+invisible(rm(sumstat)); invisible(gc())
 
 # read in LD blocks
 cat('LD: ')
@@ -268,8 +267,9 @@ cat(length(ld_list), 'blocks \n')
 r_list = lapply(1:length(ld_list), FUN=function(i) r[starts[i]:stops[i]])
 ix_sort = lapply(r_list, FUN=function(x) order(-abs(x)) - 1)
 
-rm(block_sizes, r_list, combined, map, 
-   ix_match, ix_match_list, map_match, flipped); invisible(gc())
+invisible(rm(block_sizes, r_list, combined, map, 
+             ix_match, ix_match_list, map_match, flipped))
+invisible(gc())
 
 #####################
 ## Fit L0Learn-Sum ##
@@ -307,15 +307,24 @@ if (!is.null(opt$tun) & file.exists(paste0(opt$tun, '.frq'))) {
   rescales[is.infinite(rescales)] = 0
   rescales[is.nan(rescales)] = 0
   
-  rm(freqs, maf); invisible(gc())
+  invisible(rm(freqs, maf)); invisible(gc())
 } else {
   rescales = 1
 }
 
 # run PRS / return beta on original scale
 beta = matrix(0, length(r), n_par)
-par_out = L0LearnSum_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
-                          grid, n_lambda0, scaling=rescales)
+
+if (opt$active > 0) {
+  # active set updates
+  par_out = L0LearnSum_active_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
+                                   grid, n_lambda0, scaling=rescales, max_active=opt$active)
+} else {
+  # regular coordinate descent
+  par_out = L0LearnSum_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
+                            grid, n_lambda0, scaling=rescales)
+}
+
 colnames(par_out) = c('lambda0', 'lambda1', 'lambda2', 'M', 'L0', 'L1', 'L2', 'conv', 'totit')
 par_out = data.frame(par_out)
 beta[is.na(beta)] = 0
@@ -331,9 +340,10 @@ beta = data.table(map0[nonzero,], beta[nonzero,])
 fwrite(beta, paste0(opt$out, '_beta.txt'), sep=' ')
 cat(paste0('   Effect estimates (', length(nonzero), 'x', n_par, ') written to ', opt$out, '_beta.txt \n'))
 
-rm(r, ld_list, ix_sort, i,
-   grid, n_lambda0, 
-   beta, rescales, starts, stops, nonzero); invisible(gc())
+invisible(rm(r, ld_list, ix_sort, i,
+             grid, n_lambda0, 
+             beta, rescales, starts, stops, nonzero))
+invisible(gc())
 
 ############
 ## Tuning ##
@@ -352,7 +362,7 @@ if (!is.null(opt$tun)) {
                           '1 2 header --score-col-nums 3-', n_par+2, 
                           ' --out ', opt$out, '_tun'), intern=T)
   system(paste0('rm ', opt$out, '_tun.log'))
-  rm(run_tun); invisible(gc())
+  invisible(rm(run_tun)); invisible(gc())
   
   # only look at results that converged and are nonzero
   par_out$pred_tun = NA
@@ -418,8 +428,6 @@ if (!is.null(opt$tun)) {
       left_join(cov, by=c('FID', 'IID')) %>%
       na.omit()
     
-    rm(fam, prs_tun); invisible(gc())
-    
   } else {
     cov_formula = '1'
     
@@ -428,9 +436,8 @@ if (!is.null(opt$tun)) {
       left_join(pheno, by=c('FID', 'IID')) %>%
       left_join(prs_tun, by=c('FID', 'IID')) %>%
       na.omit()
-    
-    rm(fam, prs_tun); invisible(gc())
   }
+  invisible(rm(fam, prs_tun)); invisible(gc())
   
   # evaluate fit in tuning data
   cat('evaluating, ')
@@ -483,7 +490,7 @@ if (!is.null(opt$tun)) {
   
   cat(paste0('   Tuning summary written to ', opt$out, '_pars.txt \n'))
   
-  rm(beta, best_beta, beta_col); invisible(gc())
+  invisible(rm(beta, best_beta, beta_col)); invisible(gc())
   
   #############
   ## ALL-Sum ##
@@ -506,34 +513,37 @@ if (!is.null(opt$tun)) {
   coef_glmnet = best_weights[ix_prs_select]
   cat(length(ix_prs_select), 'selected PRS, ')
   
-  beta_col = c('id', 'alt', paste0('V', ix_conv[ix_prs_select]))
-  
-  beta = fread(paste0(opt$out, '_beta.txt'),
-               select=beta_col, showProgress=F) %>% 
-    data.frame()
-  
   if (length(ix_prs_select) == 0) {
-    nonzero = integer(0)
-    beta_fit = integer(0)
-    
-  } else if (length(ix_prs_select) == 1) {
-    nonzero = which(beta[,-c(1:2)]^2 > 0)
-    beta_fit = data.matrix(beta[nonzero,-c(1, 2)]) * coef_glmnet
-    
+    n_select = 0
+
   } else {
-    nonzero = which(rowSums(beta[,-c(1:2)]^2) > 0)
-    beta_fit = data.matrix(beta[nonzero,-c(1, 2)]) %*% coef_glmnet
+    beta_col = c('id', 'alt', paste0('V', ix_conv[ix_prs_select]))
     
+    beta = fread(paste0(opt$out, '_beta.txt'),
+                 select=beta_col, showProgress=F) %>% 
+      data.frame()
+    
+    if (length(ix_prs_select) == 1) {
+      nonzero = which(beta[,-c(1:2)]^2 > 0)
+      beta_fit = data.matrix(beta[nonzero,-c(1, 2)]) * coef_glmnet
+    } else {
+      nonzero = which(rowSums(beta[,-c(1:2)]^2) > 0)
+      beta_fit = data.matrix(beta[nonzero,-c(1, 2)]) %*% coef_glmnet
+    }
+    
+    beta_ensemble = data.table(beta[nonzero,1:2], beta_fit)
+    fwrite(beta_ensemble, paste0(opt$out, '_ensembled_beta.txt'), sep=' ')
+    
+    n_select = sum(beta_fit != 0)
+    
+    invisible(rm(beta, beta_col, beta_fit, beta_ensemble, nonzero))
   }
-  n_select = sum(beta_fit != 0)
   
   cat(n_select, 'selected SNPs \n')
-  beta_ensemble = data.table(beta[nonzero,1:2], beta_fit)
-  fwrite(beta_ensemble, paste0(opt$out, '_ensembled_beta.txt'), sep=' ')
   
-  rm(beta, beta_col, beta_fit, beta_ensemble,
-     tun_data, best_tuning_ix, ix_conv,
-     fit_glmnet, best_weights, coef_glmnet, nonzero); invisible(gc())
+  invisible(rm(tun_data, best_tuning_ix, ix_conv,
+               fit_glmnet, best_weights, coef_glmnet))
+  invisible(gc())
 }
 
 ################
@@ -541,40 +551,53 @@ if (!is.null(opt$tun)) {
 ################
 if (!is.null(opt$val)) {
   cat('Validation: ')
-  # load PRS
-  cat('constructing PRS, ')
-  run_val = system(paste0(opt$plink2, ' --bfile ', opt$val,
-                          ' --score ', opt$out, '_best_beta.txt ',
-                          'cols=+scoresums,-maybesid,-dosagesum,-scoreavgs ', 
-                          '1 2 3 header --out ', opt$out, '_val'), intern=T)
-  system(paste0('rm ', opt$out, '_val.log'))
-  rm(run_val); invisible(gc())
-  
-  prs_val = fread(paste0(opt$out, '_val.sscore'), showProgress=F) %>%
-    rename(FID='#FID') %>%
-    select(FID, IID, contains('SCORE')) %>%
-    data.frame()
-  names(prs_val)[3] = 'SCORE_grid'
-  
-  run_ensemble = system(paste0(opt$plink2, ' --bfile ', opt$val,
-                               ' --score ', opt$out, '_ensembled_beta.txt ',
-                               'cols=+scoresums,-maybesid,-dosagesum,-scoreavgs ', 
-                               '1 2 3 header --out ', opt$out, '_val_ensemble'), intern=T)
-  system(paste0('rm ', opt$out, '_val_ensemble.log'))
-  rm(run_ensemble); invisible(gc())
-  
-  prs_val_ensemble = fread(paste0(opt$out, '_val_ensemble.sscore'), showProgress=F) %>%
-    rename(FID='#FID') %>%
-    select(FID, IID, contains('SCORE')) %>%
-    data.frame()
-  names(prs_val_ensemble)[3] = 'SCORE_ensemble'
-  
-  # join PRS, phenotype, covariate
+  # fam data
   fam = fread(paste0(opt$val, '.fam'),
               col.names=c('FID', 'IID', 'pat', 'mat', 'sex', 'pheno'),
               showProgress=F) %>%
     data.frame()
   
+  # load PRS
+  cat('constructing PRS, ')
+  if (file.exists(paste0(opt$out, '_best_beta.txt'))) {
+    run_val = system(paste0(opt$plink2, ' --bfile ', opt$val,
+                            ' --score ', opt$out, '_best_beta.txt ',
+                            'cols=+scoresums,-maybesid,-dosagesum,-scoreavgs ', 
+                            '1 2 3 header --out ', opt$out, '_val'), intern=T)
+    system(paste0('rm ', opt$out, '_val.log'))
+    invisible(rm(run_val)); invisible(gc())
+    
+    prs_val = fread(paste0(opt$out, '_val.sscore'), showProgress=F) %>%
+      rename(FID='#FID') %>%
+      select(FID, IID, contains('SCORE')) %>%
+      data.frame()
+    names(prs_val)[3] = 'SCORE_grid'
+  } else {
+    prs_val = fam %>%
+      select(FID, IID) %>%
+      mutate(SCORE_grid = 0)
+  }
+  
+  if (file.exists(paste0(opt$out, '_ensembled_beta.txt'))) {
+    run_ensemble = system(paste0(opt$plink2, ' --bfile ', opt$val,
+                                 ' --score ', opt$out, '_ensembled_beta.txt ',
+                                 'cols=+scoresums,-maybesid,-dosagesum,-scoreavgs ', 
+                                 '1 2 3 header --out ', opt$out, '_val_ensemble'), intern=T)
+    system(paste0('rm ', opt$out, '_val_ensemble.log'))
+    invisible(rm(run_ensemble)); invisible(gc())
+    
+    prs_val_ensemble = fread(paste0(opt$out, '_val_ensemble.sscore'), showProgress=F) %>%
+      rename(FID='#FID') %>%
+      select(FID, IID, contains('SCORE')) %>%
+      data.frame()
+    names(prs_val_ensemble)[3] = 'SCORE_ensemble'
+  } else {
+    prs_val_ensemble = fam %>%
+      select(FID, IID) %>%
+      mutate(SCORE_ensemble = 0)
+  }
+  
+  # join PRS, phenotype, covariate
   if (!is.null(opt$cov)) {
     val_data = fam %>%
       select(FID, IID) %>%
@@ -584,7 +607,8 @@ if (!is.null(opt$val)) {
       left_join(cov, by=c('FID', 'IID')) %>%
       na.omit()
     
-    rm(fam, prs_val, prs_val_ensemble, pheno, cov); invisible(gc())
+    invisible(rm(fam, prs_val, prs_val_ensemble, pheno, cov))
+    invisible(gc())
     
   } else {
     val_data = fam %>%
@@ -594,7 +618,8 @@ if (!is.null(opt$val)) {
       left_join(prs_val_ensemble, by=c('FID', 'IID')) %>%
       na.omit()
     
-    rm(fam, prs_val, prs_val_ensemble, pheno); invisible(gc())
+    invisible(rm(fam, prs_val, prs_val_ensemble, pheno)) 
+    invisible(gc())
   }
   
   # evaluate AUC/R2
