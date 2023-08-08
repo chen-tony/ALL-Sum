@@ -79,7 +79,7 @@ New LD will be computed based on an existing plink file (example name here 'REFE
 library(dplyr)
 library(data.table)
 
-blocks = fread(paste0(out, 'EUR_LDBlocks.txt'))
+blocks = fread('EUR_LDBlocks.txt')
 
 bim = fread('REFERENCE.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
 
