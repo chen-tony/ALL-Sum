@@ -32,6 +32,10 @@ option_list = list(
               default=NULL, 
               help='path to plink2', 
               metavar='character'),
+  make_option('--path', type='character', 
+              default='./', 
+              help='path to R / C++ files (if executing from another directory)', 
+              metavar='character'),
   make_option(c('-t', '--tun'), type='character', 
               default=NULL, 
               help='plink-format tuning genotype [extensions: .bed, .bim, .fam, (optional: .frq)]', 
@@ -66,11 +70,6 @@ option_list = list(
               default=NULL, 
               help='comma-separated column numbers [example: 1,2,3,...,d+2]', 
               metavar='character'),
-  
-  make_option('--active', type='integer', 
-              default=0, 
-              help='use active set for optimization [include number of repeated active sets]', 
-              metavar='integer'),
   
   make_option('--match-by-pos', type='character', 
               default=NULL, 
@@ -164,12 +163,12 @@ suppressPackageStartupMessages({
   library(glmnet)
 })
 
-invisible(sourceCpp('L0LearnSum.cpp'))
+invisible(sourceCpp(paste0(opt$path, '/L0LearnSum.cpp')))
 
 set.seed(opt$seed)
 
 cat('\n')
-  
+
 #####################
 ## Data Processing ##
 #####################
@@ -206,7 +205,7 @@ if (is.null(opt$match_by_pos)) {
     filter((ref.map == ref.sum) & (alt.map == alt.sum) | 
              (ref.map == alt.sum) & (alt.map == ref.sum)) 
   
-  map0 = combined %>% select(id, alt=alt.map)
+  map0 = combined %>% select(id, ref=ref.map)
 } else {
   # using chr/pos
   combined = map %>% 
@@ -216,9 +215,10 @@ if (is.null(opt$match_by_pos)) {
     filter((ref.map == ref.sum) & (alt.map == alt.sum) | 
              (ref.map == alt.sum) & (alt.map == ref.sum))
   
-  map0 = combined %>% select(id=paste0('id.', opt$match_by_pos), alt=alt.map)
+  map0 = combined %>% select(id=paste0('id.', opt$match_by_pos), 
+                             ref=ref.map)
 }
-  
+
 # flip sumstat effects as necessary (line up with LD reference)
 flipped = with(combined, ref.map != ref.sum)
 combined$stat[flipped] = -combined$stat[flipped]
@@ -277,7 +277,7 @@ invisible(gc())
 
 # parameter grid
 if (!is.null(opt$grid)) {
-  grid = data.frame(fread(opt$grid))
+  grid = data.matrix(fread(opt$grid))
 } else {
   grid = cbind(lambda0_start = exp(seq(log(1e-5), log(1e-3), length.out=5)),
                lambda1 = rep(0, 5),
@@ -315,15 +315,8 @@ if (!is.null(opt$tun) & file.exists(paste0(opt$tun, '.frq'))) {
 # run PRS / return beta on original scale
 beta = matrix(0, length(r), n_par)
 
-if (opt$active > 0) {
-  # active set updates
-  par_out = L0LearnSum_active_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
-                                   grid, n_lambda0, scaling=rescales, max_active=opt$active)
-} else {
-  # regular coordinate descent
-  par_out = L0LearnSum_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
-                            grid, n_lambda0, scaling=rescales)
-}
+par_out = L0LearnSum_auto(beta, ld_list, r, ix_sort, starts-1, stops-1,
+                          grid, n_lambda0, scaling=rescales)
 
 colnames(par_out) = c('lambda0', 'lambda1', 'lambda2', 'M', 'L0', 'L1', 'L2', 'conv', 'totit')
 par_out = data.frame(par_out)
@@ -473,7 +466,7 @@ if (!is.null(opt$tun)) {
   
   # choose best beta
   best_tuning_ix = which.max(par_out$pred_tun)
-  beta_col = c('id', 'alt', paste0('V', best_tuning_ix))
+  beta_col = c('id', 'ref', paste0('V', best_tuning_ix))
   
   beta = fread(paste0(opt$out, '_beta.txt'),
                select=beta_col, showProgress=F) %>% 
@@ -515,9 +508,9 @@ if (!is.null(opt$tun)) {
   
   if (length(ix_prs_select) == 0) {
     n_select = 0
-
+    
   } else {
-    beta_col = c('id', 'alt', paste0('V', ix_conv[ix_prs_select]))
+    beta_col = c('id', 'ref', paste0('V', ix_conv[ix_prs_select]))
     
     beta = fread(paste0(opt$out, '_beta.txt'),
                  select=beta_col, showProgress=F) %>% 
@@ -659,4 +652,3 @@ if (!is.null(opt$val)) {
   
   cat(paste0('   Prediction results written to ', opt$out, '_results.txt \n'))
 }
-
