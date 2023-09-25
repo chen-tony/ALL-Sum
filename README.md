@@ -1,18 +1,18 @@
 # ALL-Sum (Aggregated L0Learn using Summary Statistics)
 
-## Data
-- [EUR/AFR/ASN]_LDBlocks.txt: LD block information based on Berisa and Pickrell (2016)
-
-- Range/[EUR/AFR/ASN]/: directory of set-range formatted files for computing LD blocks in plink
-
-- Test/: directory of example data on chromosome 21
+## Simulated Data on Chromosome 21 (Data/)
+- tuning_plink.zip: .zip file of tuning data (plink format)
+- validation_plink.zip: .zip file of validation data (plink format)
+- sumstat.txt: GWAS summary statistics
+- pheno.txt: continuous phenotype
+- ref.map: mapping file to join GWAS, LD, and genotype data
 
 ## Code
 - L0LearnSum.cpp: main optimization function for L0Learn on summary data
 
-- ALL_Sum_pipeline.R: full analysis pipeline for ALL-Sum
+- allsum.R: full analysis workflow for ALL-Sum
 
-## Reference Data with ~1.5 million SNPs from HapMap3 + MEGA chips (Dropbox links?)
+## Reference Data with ~1.5 million SNPs from HapMap3 + MEGA chips (Harvard Dataverse)
 - 1000G_EUR_hm3_mega[.map/_ld.RDS]: based on 253 European samples in 1000 Genomes Project (Phase 3) 
 
 - UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
@@ -70,7 +70,7 @@ Rscript allsum.R \
 ```
 
 ## Creating new reference data
-While UKB or 1000 Genomes reference data may work well, it may be preferable to use available tuning (or other reference) data to compute LD. Below are steps to compute new LD blocks to feed into the ALL-Sum pipeline. 
+While UKB or 1000 Genomes reference data may work well, it may be preferable to use available tuning (or other reference) data to compute LD. Below are steps to compute new LD blocks to feed into the ALL-Sum workflow. 
 
 ### Create .map file
 New LD will be computed based on an existing plink file (example name here 'REFERENCE'). In ALL-Sum analysis, replace '--ref Reference/UKB_EUR_hm3_mega' with '--ref REFERENCE'. 
