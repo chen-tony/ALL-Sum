@@ -1,4 +1,5 @@
 # ALL-Sum (Aggregated L0Learn using Summary Statistics)
+Please send any suggestions and feedback on our software!
 
 ## Code
 - L0LearnSum.cpp: main optimization function for L0Learn on summary data
