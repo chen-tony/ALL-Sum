@@ -1,20 +1,19 @@
 # ALL-Sum (Aggregated L0Learn using Summary Statistics)
 
-## Simulated Data on Chromosome 21 (Data/)
+## Code
+- L0LearnSum.cpp: main optimization function for L0Learn on summary data
+
+- allsum.R: full analysis workflow for ALL-Sum
+
+## Simulated Data on Chromosome 21 (Harvard Dataverse)
 - tuning_plink.zip: .zip file of tuning data (plink format)
 - validation_plink.zip: .zip file of validation data (plink format)
 - sumstat.txt: GWAS summary statistics
 - pheno.txt: continuous phenotype
 - ref.map: mapping file to join GWAS, LD, and genotype data
 
-## Code
-- L0LearnSum.cpp: main optimization function for L0Learn on summary data
-
-- allsum.R: full analysis workflow for ALL-Sum
-
 ## Reference Data with ~1.5 million SNPs from HapMap3 + MEGA chips (Harvard Dataverse)
 - 1000G_EUR_hm3_mega[.map/_ld.RDS]: based on 253 European samples in 1000 Genomes Project (Phase 3) 
-
 - UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
 
 # Tutorial
