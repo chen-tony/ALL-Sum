@@ -2,19 +2,35 @@
 
 ## Code
 - L0LearnSum.cpp: main optimization function for L0Learn on summary data
-
 - allsum.R: full analysis workflow for ALL-Sum
 
-## Simulated Data on Chromosome 21 (Harvard Dataverse)
-- tuning_plink.zip: .zip file of tuning data (plink format)
-- validation_plink.zip: .zip file of validation data (plink format)
+## Data
+Please access simulated data and LD references from the Harvard Dataverse at https://dataverse.harvard.edu/dataverse/allsum.
+
+## Simulated Data on Chromosome 21
+- tuning.[bed/bim/fam/frq]: tuning genotypes and minor allele frequencies
+- validation.[bed/bim/fam]: validation genotypes
 - sumstat.txt: GWAS summary statistics
 - pheno.txt: continuous phenotype
 - ref.map: mapping file to join GWAS, LD, and genotype data
+- ref_ld.RDS: block LD reference
 
 ## Reference Data with ~1.5 million SNPs from HapMap3 + MEGA chips (Harvard Dataverse)
-- 1000G_EUR_hm3_mega[.map/_ld.RDS]: based on 253 European samples in 1000 Genomes Project (Phase 3) 
-- UKB_EUR_hm3_mega[.map/_ld.RDS]: based on 20,000 European samples in UK Biobank 
+- 1000G_EUR_hm3_mega_chr[1-22].map / UKB_EUR_hm3_mega_chr[1-22].map : mapping filele
+- 1000G_EUR_hm3_mega_chr[1-22]_ld.RDS / UKB_EUR_hm3_mega_chr[1-22]_ld.RDS : block LD reference
+Combine per-chromosome LD files with the following script:
+```
+ld_list = list()
+for (chrom in 1:2) {
+  ld_list[[chrom]] = readRDS(paste0('1000G_EUR_hm3_mega_chr', chrom, '_ld.RDS'))
+  print(sum(sqrt(unlist(lapply(big_ld_list[[chrom]], length)))))
+}
+ld_list = unlist(ld_list, recursive=F)
+length(ld_list) # should be 1701
+sum(sqrt(unlist(lapply(ld_list, length)))) # should be 1494152
+saveRDS(ld_list, '1000G_EUR_hm3_mega_ld.RDS')
+```
+
 
 # Tutorial
 ## Download package
@@ -24,34 +40,26 @@ git clone https://github.com/chen-tony/ALL-sum.git
 
 # necessary R packages
 Rscript -e 'install.packages(c('optparse', 'Rcpp','Rcpp','RcppArmadillo', 'dplyr', 'glmnet', 'RISCA'))'
-
-# download Reference data
-wget Reference.zip
 ```
 
-## Run ALL-Sum
+## Test ALL-Sum
 Change the `--plink2` argument to wherever it is installed.
-### Test data
 ```
-# download test data
-wget Test.zip
-unzip Test.zip
-
 # help
 Rscript allsum.R -h 
 
 # run on test data
 Rscript allsum.R \
---out Test/test \
---sumstat Test/sumstat.txt \
---ref Test/ref \
+--out test \
+--sumstat sumstat.txt \
+--ref ref \
 --plink2 ~/plink2 \
---tun Test/tuning \
---val Test/validation \
---pheno Test/pheno.txt
+--tun tuning \
+--val validation \
+--pheno pheno.txt
 ```
 
-### Full-genome analysis
+## Full-genome analysis
 Analysis of ~1.5 million SNPs should use around 20GB of memory and 45 minutes of runtime. Note that binary traits will likely take a little longer than continuous traits. Below is an example script 
 ```
 Rscript allsum.R \
@@ -66,6 +74,7 @@ Rscript allsum.R \
 --pheno-name FID,IID,Trait \
 --cov covariates.cov \
 --cov-name FID,IID,age,sex,pc1,pc2,pc3,pc4,pc5,pc6,pc7,pc8,pc9,pc10
+
 ```
 
 ## Creating new reference data
