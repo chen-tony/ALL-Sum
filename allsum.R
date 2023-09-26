@@ -168,7 +168,7 @@ invisible(sourceCpp(paste0(opt$path, '/L0LearnSum.cpp')))
 set.seed(opt$seed)
 
 cat('\n')
-
+  
 #####################
 ## Data Processing ##
 #####################
@@ -205,7 +205,7 @@ if (is.null(opt$match_by_pos)) {
     filter((ref.map == ref.sum) & (alt.map == alt.sum) | 
              (ref.map == alt.sum) & (alt.map == ref.sum)) 
   
-  map0 = combined %>% select(id, ref=ref.map)
+  map0 = combined %>% select(id, alt=alt.map)
 } else {
   # using chr/pos
   combined = map %>% 
@@ -216,9 +216,9 @@ if (is.null(opt$match_by_pos)) {
              (ref.map == alt.sum) & (alt.map == ref.sum))
   
   map0 = combined %>% select(id=paste0('id.', opt$match_by_pos), 
-                             ref=ref.map)
+                             alt=alt.map)
 }
-
+  
 # flip sumstat effects as necessary (line up with LD reference)
 flipped = with(combined, ref.map != ref.sum)
 combined$stat[flipped] = -combined$stat[flipped]
@@ -466,7 +466,7 @@ if (!is.null(opt$tun)) {
   
   # choose best beta
   best_tuning_ix = which.max(par_out$pred_tun)
-  beta_col = c('id', 'ref', paste0('V', best_tuning_ix))
+  beta_col = c('id', 'alt', paste0('V', best_tuning_ix))
   
   beta = fread(paste0(opt$out, '_beta.txt'),
                select=beta_col, showProgress=F) %>% 
@@ -508,9 +508,9 @@ if (!is.null(opt$tun)) {
   
   if (length(ix_prs_select) == 0) {
     n_select = 0
-    
+
   } else {
-    beta_col = c('id', 'ref', paste0('V', ix_conv[ix_prs_select]))
+    beta_col = c('id', 'alt', paste0('V', ix_conv[ix_prs_select]))
     
     beta = fread(paste0(opt$out, '_beta.txt'),
                  select=beta_col, showProgress=F) %>% 
