@@ -88,7 +88,7 @@ New LD will be computed based on an existing plink file (example name here 'REFE
 library(dplyr)
 library(data.table)
 
-blocks = fread('EUR_LDBlocks.txt')
+blocks = fread('Range/EUR_LDBlocks.txt')
 
 bim = fread('REFERENCE.bim', col.names=c('chr', 'rsid', 'posg', 'pos', 'alt', 'ref'))
 
@@ -129,7 +129,7 @@ For 1000 Genomes EUR (~500 samples, 1.5 SNPs), this should take about 10 minutes
 
 ```
 # download Ranges for block positions
-wget Range.zip
+unzip Range/EUR.zip
 
 mkdir LD
 
